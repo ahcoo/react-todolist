@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import TodoEdit from "./components/TodoEdit";
 import TodoInsert from "./components/TodoInsert";
 import TodoList from "./components/TodoList";
@@ -7,39 +7,45 @@ import TodoTemplate from "./components/TodoTemplate";
 
 function App() {
   const [todos, setTodos] = useState([]);
+  const [todo, setTodo] = useState("");
   const [insertToggle, setInsertToggle] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const nextId = useRef(4);
 
-  const onInsert = (text) => {
-    const todo = {
-      id: nextId.current,
-      text: text,
-      checked: false,
-    };
+  const onInsert = async (text) => {
+    await axios.post(`http://localhost:4000/todos/`, { text });
     setTodos((todos) => todos.concat(todo));
-    nextId.current++;
   };
 
-  const onInsertToggle = () => {
+  const onInsertToggle = async (id) => {
     setInsertToggle((prev) => !prev);
   };
 
-  const onRemove = (id) => {
-    setTodos((todos) => todos.filter((todo) => todo.id !== id));
+  const onRemove = async (id) => {
+    try {
+      await axios.delete(`http://localhost:4000/todos/${id}`);
+      setTodos((todos) => todos.filter((todo) => todo.id !== id));
+    } catch (e) {
+      setError();
+    }
   };
 
-  const onToggle = (id) => {
-    setTodos((todos) =>
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, checked: !todo.checked } : todo
-      )
-    );
+  const onToggle = async (id) => {
+    try {
+      await axios.patch(`http://localhost:4000/todos/check/${id}`);
+      setTodos((todos) =>
+        todos.map((todo) =>
+          todo.id === id ? { ...todo, checked: !todo.checked } : todo
+        )
+      );
+    } catch (e) {
+      setError();
+    }
   };
 
-  const onUpdate = (id, text) => {
+  const onUpdate = async (id, text) => {
+    await axios.patch(`http://localhost:4000/todos/${id}`, { text });
     setTodos((todos) =>
       todos.map((todo) => (todo.id === id ? { ...todo, text } : todo))
     );
@@ -53,7 +59,9 @@ function App() {
           url: "http://localhost:4000/todos",
           method: "GET",
         });
-        console.log(data.data);
+        //java스크립트에서 새 배열 만드는 법 = []
+        //하지만 아래 data.data도 새 배열을 생성하는 구문.
+        //위 const data = await axios({})의 axios가 새 배열을 자동적으로 생성해주기 때문에 새 배열이란 뜻이 됨.
         setTodos(data.data);
         setIsLoading(false);
         // throw new Error("조회중 에러발생!!");
