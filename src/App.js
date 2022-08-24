@@ -90,8 +90,15 @@ function App() {
         setError(e);
       }
     };
+
     getData();
   }, []);
+
+    
+    setTodos((todos) => todos.concat(todo));
+    nextId.current++;
+  };
+
 
   if (error) {
     return <>에러: {error.message}</>;
