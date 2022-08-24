@@ -7,15 +7,16 @@ import TodoTemplate from "./components/TodoTemplate";
 
 function App() {
   const [todos, setTodos] = useState([]);
-  const [todo, setTodo] = useState("");
+  //const [todo, setTodo] = useState("");
   const [insertToggle, setInsertToggle] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const onInsert = async (text) => {
-    await axios.post(`http://localhost:4000/todos/`, { text });
-    setTodos((todos) => todos.concat(todo));
+    const data = await axios.post(`http://localhost:4000/todos/`, { text });
+    setTodos(data.data);
+    // setTodos((todos) => todos.concat(todo));
   };
 
   const onInsertToggle = async (id) => {
@@ -25,7 +26,9 @@ function App() {
   const onRemove = async (id) => {
     try {
       await axios.delete(`http://localhost:4000/todos/${id}`);
-      setTodos((todos) => todos.filter((todo) => todo.id !== id));
+      const data = await axios.get(`http://localhost:4000/todos`);
+      setTodos(data.data);
+      //setTodos((todos) => todos.filter((todo) => todo.id !== id));
     } catch (e) {
       setError();
     }
@@ -45,10 +48,23 @@ function App() {
   };
 
   const onUpdate = async (id, text) => {
-    await axios.patch(`http://localhost:4000/todos/${id}`, { text });
-    setTodos((todos) =>
-      todos.map((todo) => (todo.id === id ? { ...todo, text } : todo))
-    );
+    // setTodos((todos) =>
+    //   todos.map((todo) => (todo.id === id ? { ...todo, text } : todo))
+    // );
+    try {
+      const data = await axios({
+        url: `http://localhost:4000/todos/${id}`,
+        method: "PATCH",
+        data: {
+          text,
+          perform_date: "2022-08-09 11:11:11",
+        },
+      });
+      setTodos(data.data);
+      //todos.map((todo) => (todo.id === id ? { ...todo, text } : todo))
+    } catch (e) {
+      setError(e);
+    }
     onInsertToggle();
   };
 
@@ -87,6 +103,7 @@ function App() {
 
   return (
     <TodoTemplate>
+      <div className="bg-red-500">안녕</div>
       <TodoInsert onInsert={onInsert} />
       <TodoList
         todos={todos}
