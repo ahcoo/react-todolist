@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import TodoEdit from "./components/TodoEdit";
 import TodoInsert from "./components/TodoInsert";
 import TodoList from "./components/TodoList";
@@ -7,43 +7,83 @@ import TodoTemplate from "./components/TodoTemplate";
 
 function App() {
   const [todos, setTodos] = useState([]);
-  //const [todo, setTodo] = useState("");
   const [insertToggle, setInsertToggle] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const nextId = useRef(4);
+
+  const handleDragStart = (e, todo) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("tmp", JSON.stringify(todo));
+  };
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e, targetItem) => {
+    e.preventDefault();
+    try {
+      const originalItem = await JSON.parse(e.dataTransfer.getData("tmp")); // 1
+      // setTodos((todos) =>
+      //   todos.map((todo) => {
+      //     return todo.id === targetItem.id
+      //       ? { ...originalItem, id: targetItem.id }
+      //       : todo.id === originalItem.id
+      //       ? { ...targetItem, id: originalItem.id }
+      //       : todo;
+      //   })
+      // );
+      const data = await axios({
+        url: `http://localhost:4000/todos/swap/${originalItem.id}`,
+        method: "PATCH",
+        data: { targetId: targetItem.id },
+      });
+
+      setTodos(data.data);
+    } catch (e) {
+      setError(e);
+    }
+  };
 
   const onInsert = async (text) => {
     const data = await axios.post(`http://localhost:4000/todos/`, { text });
     setTodos(data.data);
     // setTodos((todos) => todos.concat(todo));
+
+    nextId.current++;
   };
 
-  const onInsertToggle = async (id) => {
+  const onInsertToggle = () => {
     setInsertToggle((prev) => !prev);
   };
 
   const onRemove = async (id) => {
+    // setTodos((todos) => todos.filter((todo) => todo.id !== id));
     try {
-      await axios.delete(`http://localhost:4000/todos/${id}`);
-      const data = await axios.get(`http://localhost:4000/todos`);
+      await axios({
+        url: `http://localhost:4000/todos/${id}`,
+        method: "DELETE",
+      });
+      const data = await axios({
+        url: `http://localhost:4000/todos`,
+        method: "GET",
+      });
       setTodos(data.data);
-      //setTodos((todos) => todos.filter((todo) => todo.id !== id));
     } catch (e) {
-      setError();
+      setError(e);
     }
   };
 
   const onToggle = async (id) => {
     try {
-      await axios.patch(`http://localhost:4000/todos/check/${id}`);
-      setTodos((todos) =>
-        todos.map((todo) =>
-          todo.id === id ? { ...todo, checked: !todo.checked } : todo
-        )
-      );
+      const data = await axios({
+        url: `http://localhost:4000/todos/check/${id}`,
+        method: "PATCH",
+      });
+      setTodos(data.data);
     } catch (e) {
-      setError();
+      setError(e);
     }
   };
 
@@ -61,7 +101,6 @@ function App() {
         },
       });
       setTodos(data.data);
-      //todos.map((todo) => (todo.id === id ? { ...todo, text } : todo))
     } catch (e) {
       setError(e);
     }
@@ -75,9 +114,7 @@ function App() {
           url: "http://localhost:4000/todos",
           method: "GET",
         });
-        //java스크립트에서 새 배열 만드는 법 = []
-        //하지만 아래 data.data도 새 배열을 생성하는 구문.
-        //위 const data = await axios({})의 axios가 새 배열을 자동적으로 생성해주기 때문에 새 배열이란 뜻이 됨.
+
         setTodos(data.data);
         setIsLoading(false);
         // throw new Error("조회중 에러발생!!");
@@ -94,12 +131,6 @@ function App() {
     getData();
   }, []);
 
-    
-    setTodos((todos) => todos.concat(todo));
-    nextId.current++;
-  };
-
-
   if (error) {
     return <>에러: {error.message}</>;
   }
@@ -110,7 +141,6 @@ function App() {
 
   return (
     <TodoTemplate>
-      <div className="bg-red-500">안녕</div>
       <TodoInsert onInsert={onInsert} />
       <TodoList
         todos={todos}
@@ -118,6 +148,9 @@ function App() {
         onToggle={onToggle}
         onInsertToggle={onInsertToggle}
         setSelectedTodo={setSelectedTodo}
+        handleDragStart={handleDragStart}
+        handleDragOver={handleDragOver}
+        handleDrop={handleDrop}
       />
       {insertToggle && (
         <TodoEdit
